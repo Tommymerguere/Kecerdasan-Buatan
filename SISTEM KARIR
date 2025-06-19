@@ -1,0 +1,378 @@
+"""
+IMPLEMENTASI SISTEM REKOMENDASI KARIER BERBASIS PYTHON 
+MENGGUNAKAN ALGORITMA BACKWARD CHAINING
+
+Sistem ini menggunakan backward chaining untuk merekomendasikan karier
+berdasarkan keahlian, minat, dan karakteristik pribadi pengguna.
+"""
+
+class CareerRecommendationSystem:
+    def __init__(self):
+        # Database aturan (rules) dalam format: 
+        # {karier: [keahlian1, keahlian2, minat1, karakteristik1, ...]}
+        self.rules = {
+            'software_engineer': ['programming', 'problem_solving', 'logical_thinking', 'technology_interest', 'detail_oriented'],
+            'data_scientist': ['statistics', 'programming', 'analytical_thinking', 'research_interest', 'pattern_recognition'],
+            'web_designer': ['design_skills', 'creativity', 'visual_thinking', 'technology_interest', 'artistic_sense'],
+            'marketing_manager': ['communication', 'creativity', 'people_skills', 'business_interest', 'strategic_thinking'],
+            'teacher': ['communication', 'patience', 'empathy', 'education_interest', 'people_skills'],
+            'doctor': ['analytical_thinking', 'empathy', 'detail_oriented', 'science_interest', 'helping_others'],
+            'architect': ['design_skills', 'spatial_thinking', 'creativity', 'technical_drawing', 'problem_solving'],
+            'financial_analyst': ['analytical_thinking', 'mathematical_skills', 'detail_oriented', 'business_interest', 'logical_thinking'],
+            'psychologist': ['empathy', 'communication', 'analytical_thinking', 'research_interest', 'helping_others'],
+            'chef': ['creativity', 'artistic_sense', 'patience', 'culinary_interest', 'physical_stamina'],
+            'journalist': ['communication', 'writing_skills', 'curiosity', 'research_interest', 'adaptability'],
+            'entrepreneur': ['leadership', 'risk_taking', 'creativity', 'business_interest', 'strategic_thinking']
+        }
+        
+        # Database fakta (keahlian dan karakteristik yang dimiliki user)
+        self.facts = set()
+        
+        # Untuk tracking proses reasoning
+        self.reasoning_trace = []
+        
+        # Database semua kemungkinan keahlian/karakteristik
+        self.all_attributes = {
+            'programming', 'design_skills', 'communication', 'analytical_thinking', 
+            'creativity', 'problem_solving', 'logical_thinking', 'empathy', 
+            'leadership', 'mathematical_skills', 'writing_skills', 'patience',
+            'detail_oriented', 'people_skills', 'strategic_thinking', 'curiosity',
+            'adaptability', 'risk_taking', 'spatial_thinking', 'technical_drawing',
+            'physical_stamina', 'artistic_sense', 'pattern_recognition', 'statistics',
+            'visual_thinking', 'helping_others', 'technology_interest', 'science_interest',
+            'business_interest', 'education_interest', 'research_interest', 'culinary_interest'
+        }
+    
+    def add_attribute(self, attribute):
+        """Menambahkan keahlian/karakteristik yang dimiliki user"""
+        if attribute in self.all_attributes:
+            self.facts.add(attribute)
+            print(f"Atribut '{attribute}' ditambahkan ke profil Anda.")
+        else:
+            print(f"Atribut '{attribute}' tidak dikenali dalam sistem.")
+            self.suggest_similar_attributes(attribute)
+    
+    def suggest_similar_attributes(self, attribute):
+        """Menyarankan atribut yang mirip jika input tidak dikenali"""
+        suggestions = [attr for attr in self.all_attributes if attribute.lower() in attr.lower()]
+        if suggestions:
+            print("Mungkin maksud Anda:")
+            for suggestion in suggestions[:3]:
+                print(f"- {suggestion}")
+    
+    def remove_attribute(self, attribute):
+        """Menghapus atribut dari profil user"""
+        if attribute in self.facts:
+            self.facts.remove(attribute)
+            print(f"Atribut '{attribute}' dihapus dari profil Anda.")
+        else:
+            print(f"Atribut '{attribute}' tidak ada dalam profil Anda.")
+    
+    def show_profile(self):
+        """Menampilkan profil lengkap user"""
+        if self.facts:
+            print("PROFIL ANDA:")
+            print("-" * 30)
+            
+            # Kategorikan atribut
+            skills = [attr for attr in self.facts if 'skills' in attr or attr in 
+                     ['programming', 'design_skills', 'mathematical_skills', 'writing_skills']]
+            thinking_styles = [attr for attr in self.facts if 'thinking' in attr]
+            personality = [attr for attr in self.facts if attr in 
+                          ['creativity', 'empathy', 'leadership', 'patience', 'curiosity', 
+                           'adaptability', 'risk_taking', 'detail_oriented', 'artistic_sense']]
+            interests = [attr for attr in self.facts if 'interest' in attr]
+            others = [attr for attr in self.facts if attr not in skills + thinking_styles + personality + interests]
+            
+            if skills:
+                print("Keahlian Teknis:")
+                for skill in sorted(skills):
+                    print(f"  • {skill}")
+            
+            if thinking_styles:
+                print("Gaya Berpikir:")
+                for style in sorted(thinking_styles):
+                    print(f"  • {style}")
+            
+            if personality:
+                print("Karakteristik Kepribadian:")
+                for trait in sorted(personality):
+                    print(f"  • {trait}")
+            
+            if interests:
+                print("Minat:")
+                for interest in sorted(interests):
+                    print(f"  • {interest}")
+            
+            if others:
+                print("Lainnya:")
+                for other in sorted(others):
+                    print(f"  • {other}")
+        else:
+            print("Profil Anda masih kosong. Silakan tambahkan keahlian dan karakteristik.")
+    
+    def backward_chaining(self, goal):
+        """
+        Implementasi algoritma Backward Chaining untuk rekomendasi karier
+        
+        Args:
+            goal: Karier yang ingin dibuktikan kesesuaiannya
+            
+        Returns:
+            Tuple (proven, confidence_score)
+        """
+        self.reasoning_trace.append(f"Mengevaluasi kesesuaian untuk karier: {goal}")
+        
+        # Cek apakah goal ada dalam rules
+        if goal not in self.rules:
+            self.reasoning_trace.append(f"Tidak ada aturan untuk karier '{goal}'")
+            return False, 0
+        
+        # Ambil requirements untuk goal
+        required_attributes = self.rules[goal]
+        self.reasoning_trace.append(f"Untuk '{goal}' diperlukan: {required_attributes}")
+        
+        # Cek kesesuaian dengan profil user
+        matched_attributes = []
+        missing_attributes = []
+        
+        for attribute in required_attributes:
+            if attribute in self.facts:
+                matched_attributes.append(attribute)
+                self.reasoning_trace.append(f"'{attribute}' - COCOK")
+            else:
+                missing_attributes.append(attribute)
+                self.reasoning_trace.append(f"'{attribute}' - TIDAK ADA")
+        
+        # Hitung skor kesesuaian
+        confidence = len(matched_attributes) / len(required_attributes) * 100
+        
+        # Tentukan hasil
+        if confidence >= 80:
+            self.reasoning_trace.append(f"SANGAT COCOK: '{goal}' dengan skor {confidence:.1f}%")
+            return True, confidence
+        elif confidence >= 60:
+            self.reasoning_trace.append(f"CUKUP COCOK: '{goal}' dengan skor {confidence:.1f}%")
+            return True, confidence
+        else:
+            self.reasoning_trace.append(f"KURANG COCOK: '{goal}' dengan skor {confidence:.1f}%")
+            return False, confidence
+    
+    def get_career_recommendations(self):
+        """Mendapatkan rekomendasi karier berdasarkan profil user"""
+        print("\n" + "="*70)
+        print("ANALISIS KESESUAIAN KARIER MENGGUNAKAN BACKWARD CHAINING")
+        print("="*70)
+        
+        if not self.facts:
+            print("Profil kosong! Silakan tambahkan keahlian dan karakteristik terlebih dahulu.")
+            return
+        
+        results = []
+        
+        # Evaluasi setiap karier
+        for career in self.rules.keys():
+            self.reasoning_trace = []  # Reset trace
+            suitable, confidence = self.backward_chaining(career)
+            
+            results.append({
+                'career': career,
+                'suitable': suitable,
+                'confidence': confidence,
+                'trace': self.reasoning_trace.copy()
+            })
+        
+        # Urutkan berdasarkan skor kesesuaian
+        results.sort(key=lambda x: x['confidence'], reverse=True)
+        
+        # Tampilkan hasil
+        print("\nREKOMENDASI KARIER:")
+        print("-" * 50)
+        
+        # Karier yang sangat cocok (≥80%)
+        excellent_matches = [r for r in results if r['confidence'] >= 80]
+        if excellent_matches:
+            print("SANGAT DIREKOMENDASIKAN:")
+            for result in excellent_matches:
+                print(f"   {result['career'].replace('_', ' ').title()} - {result['confidence']:.1f}%")
+        
+        # Karier yang cukup cocok (60-79%)
+        good_matches = [r for r in results if 60 <= r['confidence'] < 80]
+        if good_matches:
+            print("\nLAYAK DIPERTIMBANGKAN:")
+            for result in good_matches:
+                print(f"   {result['career'].replace('_', ' ').title()} - {result['confidence']:.1f}%")
+        
+        # Karier dengan potensi (40-59%)
+        potential_matches = [r for r in results if 40 <= r['confidence'] < 60]
+        if potential_matches:
+            print("\nMEMILIKI POTENSI (perlu pengembangan):")
+            for result in potential_matches[:3]:  # Hanya 3 teratas
+                print(f"   {result['career'].replace('_', ' ').title()} - {result['confidence']:.1f}%")
+        
+        if not excellent_matches and not good_matches:
+            print("Belum ada karier yang sangat cocok. Pertimbangkan untuk mengembangkan keahlian lebih lanjut.")
+        
+        return results
+    
+    def show_reasoning_trace(self, career):
+        """Menampilkan jejak reasoning untuk karier tertentu"""
+        career = career.lower().replace(' ', '_')
+        self.reasoning_trace = []
+        self.backward_chaining(career)
+        
+        print(f"\nANALISIS DETAIL UNTUK '{career.replace('_', ' ').title()}':")
+        print("-" * 60)
+        for step in self.reasoning_trace:
+            print(f"  {step}")
+    
+    def show_career_requirements(self, career):
+        """Menampilkan requirements untuk karier tertentu"""
+        career = career.lower().replace(' ', '_')
+        if career in self.rules:
+            print(f"\nREQUIREMENTS UNTUK '{career.replace('_', ' ').title()}':")
+            print("-" * 50)
+            requirements = self.rules[career]
+            for req in requirements:
+                status = "SUDAH" if req in self.facts else "BELUM"
+                print(f"{status} {req.replace('_', ' ').title()}")
+                
+            # Berikan saran pengembangan
+            missing = [req for req in requirements if req not in self.facts]
+            if missing:
+                print(f"\nSARAN PENGEMBANGAN:")
+                for req in missing:
+                    print(f"   • Kembangkan: {req.replace('_', ' ').title()}")
+        else:
+            print(f"Karier '{career}' tidak ditemukan dalam database.")
+    
+    def show_all_careers(self):
+        """Menampilkan semua karier yang tersedia"""
+        print("KARIER YANG TERSEDIA DALAM SISTEM:")
+        print("-" * 40)
+        for i, career in enumerate(sorted(self.rules.keys()), 1):
+            print(f"{i:2d}. {career.replace('_', ' ').title()}")
+    
+    def show_all_attributes(self):
+        """Menampilkan semua atribut yang tersedia"""
+        print("ATRIBUT YANG TERSEDIA:")
+        print("-" * 30)
+        
+        # Kategorikan atribut untuk tampilan yang lebih rapi
+        categories = {
+            'Keahlian Teknis': ['programming', 'design_skills', 'mathematical_skills', 'writing_skills', 'technical_drawing', 'statistics'],
+            'Gaya Berpikir': ['analytical_thinking', 'logical_thinking', 'strategic_thinking', 'visual_thinking', 'spatial_thinking', 'pattern_recognition'],
+            'Kepribadian': ['creativity', 'empathy', 'leadership', 'patience', 'curiosity', 'adaptability', 'risk_taking', 'detail_oriented', 'artistic_sense', 'physical_stamina'],
+            'Kemampuan Sosial': ['communication', 'people_skills', 'helping_others'],
+            'Minat': ['technology_interest', 'science_interest', 'business_interest', 'education_interest', 'research_interest', 'culinary_interest'],
+            'Lainnya': ['problem_solving']
+        }
+        
+        for category, attributes in categories.items():
+            print(f"\n{category}:")
+            for attr in sorted(attributes):
+                if attr in self.all_attributes:
+                    print(f"  • {attr}")
+
+def main():
+    """Fungsi utama untuk menjalankan sistem rekomendasi karier"""
+    system = CareerRecommendationSystem()
+    
+    print("="*70)
+    print("SISTEM REKOMENDASI KARIER")
+    print("   Menggunakan Algoritma Backward Chaining")
+    print("="*70)
+    print("Temukan karier yang tepat berdasarkan keahlian dan minat Anda!")
+    
+    while True:
+        print("\n📋 MENU:")
+        print("1. Tambah keahlian/karakteristik")
+        print("2. Hapus keahlian/karakteristik")
+        print("3. Lihat profil saya")
+        print("4. Lihat semua atribut yang tersedia")
+        print("5. Dapatkan rekomendasi karier")
+        print("6. Analisis detail untuk karier tertentu")
+        print("7. Lihat requirements karier")
+        print("8. Lihat semua karier yang tersedia")
+        print("9. Reset profil")
+        print("0. Keluar")
+        
+        choice = input("\n🔹 Pilih menu (0-9): ").strip()
+        
+        if choice == '1':
+            attribute = input("Masukkan keahlian/karakteristik: ").strip().lower().replace(' ', '_')
+            system.add_attribute(attribute)
+        
+        elif choice == '2':
+            attribute = input("Masukkan keahlian/karakteristik yang ingin dihapus: ").strip().lower().replace(' ', '_')
+            system.remove_attribute(attribute)
+        
+        elif choice == '3':
+            system.show_profile()
+        
+        elif choice == '4':
+            system.show_all_attributes()
+        
+        elif choice == '5':
+            system.get_career_recommendations()
+        
+        elif choice == '6':
+            career = input("Masukkan nama karier: ").strip()
+            system.show_reasoning_trace(career)
+        
+        elif choice == '7':
+            career = input("Masukkan nama karier: ").strip()
+            system.show_career_requirements(career)
+        
+        elif choice == '8':
+            system.show_all_careers()
+        
+        elif choice == '9':
+            system.facts.clear()
+            print("Profil telah direset.")
+        
+        elif choice == '0':
+            print("Terima kasih! Semoga Anda menemukan karier yang tepat!")
+            break
+        
+        else:
+            print("Pilihan tidak valid!")
+
+# Fungsi demo untuk menunjukkan cara kerja sistem
+def demo():
+    """Fungsi demo untuk menunjukkan cara kerja sistem"""
+    print("="*70)
+    print("DEMO SISTEM REKOMENDASI KARIER")
+    print("="*70)
+    
+    system = CareerRecommendationSystem()
+    
+    # Contoh profil 1: Calon Software Engineer
+    print("\nPROFIL 1: Calon Software Engineer")
+    print("-" * 40)
+    profile1 = ['programming', 'logical_thinking', 'problem_solving', 'technology_interest', 'analytical_thinking']
+    for attr in profile1:
+        system.add_attribute(attr)
+    
+    system.get_career_recommendations()
+    system.show_reasoning_trace('software_engineer')
+    
+    # Reset untuk profil berikutnya
+    system.facts.clear()
+    
+    # Contoh profil 2: Calon Marketing Manager
+    print("\n\nPROFIL 2: Calon Marketing Manager")
+    print("-" * 40)
+    profile2 = ['communication', 'creativity', 'people_skills', 'business_interest', 'strategic_thinking']
+    for attr in profile2:
+        system.add_attribute(attr)
+    
+    system.get_career_recommendations()
+    system.show_reasoning_trace('marketing_manager')
+
+if __name__ == "__main__":
+    # Uncomment baris di bawah untuk menjalankan demo
+    # demo()
+    
+    # Jalankan sistem interaktif
+    main()

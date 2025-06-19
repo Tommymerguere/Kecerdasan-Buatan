@@ -1,0 +1,222 @@
+import numpy as np
+import pandas as pd
+from collections import Counter
+
+class IrisKNNClassifier:
+    def __init__(self, k=3):
+        self.k = k
+        self.X_train = None
+        self.y_train = None
+        
+    def fit(self, X, y):
+        """
+        Melatih model dengan data training
+        X: fitur (panjang sepal, lebar sepal, panjang petal, lebar petal)
+        y: label (jenis bunga)
+        """
+        self.X_train = np.array(X)
+        self.y_train = np.array(y)
+        print(f"Model berhasil dilatih dengan {len(X)} data training")
+    
+    def euclidean_distance(self, point1, point2):
+        """
+        Menghitung jarak euclidean antara dua titik
+        """
+        return np.sqrt(np.sum((point1 - point2) ** 2))
+    
+    def predict(self, X_test):
+        """
+        Memprediksi label untuk data test
+        """
+        predictions = []
+        
+        for test_point in X_test:
+            # Hitung jarak ke semua titik training
+            distances = []
+            for i, train_point in enumerate(self.X_train):
+                dist = self.euclidean_distance(test_point, train_point)
+                distances.append((dist, self.y_train[i]))
+            
+            # Urutkan berdasarkan jarak dan ambil k terdekat
+            distances.sort(key=lambda x: x[0])
+            k_nearest = distances[:self.k]
+            
+            # Voting dari k tetangga terdekat
+            k_nearest_labels = [label for _, label in k_nearest]
+            prediction = Counter(k_nearest_labels).most_common(1)[0][0]
+            predictions.append(prediction)
+        
+        return predictions
+    
+    def predict_single(self, sepal_length, sepal_width, petal_length, petal_width):
+        """
+        Memprediksi jenis bunga untuk satu input
+        """
+        test_point = np.array([[sepal_length, sepal_width, petal_length, petal_width]])
+        prediction = self.predict(test_point)
+        
+        # Hitung jarak ke k tetangga terdekat untuk confidence
+        distances = []
+        for i, train_point in enumerate(self.X_train):
+            dist = self.euclidean_distance(test_point[0], train_point)
+            distances.append((dist, self.y_train[i]))
+        
+        distances.sort(key=lambda x: x[0])
+        k_nearest = distances[:self.k]
+        
+        # Hitung confidence berdasarkan voting
+        k_nearest_labels = [label for _, label in k_nearest]
+        label_counts = Counter(k_nearest_labels)
+        confidence = label_counts[prediction[0]] / self.k * 100
+        
+        return prediction[0], confidence, k_nearest
+
+def create_iris_dataset():
+    """
+    Membuat dataset Iris yang sudah dikenal
+    """
+    # Data Iris yang disederhanakan
+    data = {
+        'sepal_length': [5.1, 4.9, 4.7, 4.6, 5.0, 5.4, 4.6, 5.0, 4.4, 4.9,
+                        7.0, 6.4, 6.9, 5.5, 6.5, 5.7, 6.3, 4.9, 6.6, 5.2,
+                        6.3, 5.8, 7.1, 6.3, 6.5, 7.6, 4.9, 7.3, 6.7, 7.2,
+                        6.2, 6.1, 6.4, 7.2, 7.4, 7.9, 6.4, 6.3, 6.1, 7.7],
+        'sepal_width': [3.5, 3.0, 3.2, 3.1, 3.6, 3.9, 3.4, 3.4, 2.9, 3.1,
+                       3.2, 3.2, 3.1, 2.3, 2.8, 2.8, 3.3, 2.4, 2.9, 2.7,
+                       3.3, 2.7, 3.0, 2.9, 3.0, 3.0, 2.5, 2.9, 2.5, 3.6,
+                       2.2, 2.9, 2.7, 3.2, 2.8, 3.8, 2.8, 2.8, 2.6, 2.6],
+        'petal_length': [1.4, 1.4, 1.3, 1.5, 1.4, 1.7, 1.4, 1.5, 1.4, 1.5,
+                        4.7, 4.5, 4.9, 4.0, 4.6, 4.5, 4.7, 3.3, 4.6, 3.9,
+                        6.0, 5.1, 5.9, 5.6, 5.8, 6.6, 4.5, 6.3, 5.8, 6.1,
+                        4.8, 5.6, 5.3, 6.0, 6.1, 6.4, 5.6, 5.1, 5.6, 6.9],
+        'petal_width': [0.2, 0.2, 0.2, 0.2, 0.2, 0.4, 0.3, 0.2, 0.2, 0.1,
+                       1.4, 1.5, 1.5, 1.3, 1.5, 1.3, 1.6, 1.0, 1.3, 1.4,
+                       2.5, 1.9, 2.1, 1.8, 2.2, 2.1, 1.7, 1.8, 1.8, 2.5,
+                       1.8, 2.4, 2.3, 1.8, 1.9, 2.0, 2.2, 1.5, 1.4, 2.3],
+        'species': ['setosa'] * 10 + ['versicolor'] * 10 + ['virginica'] * 10 + ['versicolor'] * 10
+    }
+    
+    return pd.DataFrame(data)
+
+def get_species_info():
+    """
+    Informasi tentang jenis bunga Iris
+    """
+    return {
+        'setosa': {
+            'nama': 'Iris Setosa',
+            'ciri': 'Kelopak lebar, mahkota kecil dan sempit'
+        },
+        'versicolor': {
+            'nama': 'Iris Versicolor', 
+            'ciri': 'Ukuran sedang, warna ungu kebiruan'
+        },
+        'virginica': {
+            'nama': 'Iris Virginica',
+            'ciri': 'Yang terbesar, mahkota lebar dan panjang'
+        }
+    }
+
+def main():
+    # Load dataset
+    df = create_iris_dataset()
+    species_info = get_species_info()
+    
+    # Persiapkan data training
+    X = df[['sepal_length', 'sepal_width', 'petal_length', 'petal_width']].values
+    y = df['species'].values
+    
+    # Inisialisasi dan latih model
+    classifier = IrisKNNClassifier(k=5)
+    classifier.fit(X, y)
+    
+    print("=== KLASIFIKASI BUNGA IRIS MENGGUNAKAN K-NN ===")
+    print("Masukkan ukuran kelopak dan mahkota bunga (dalam cm)")
+    print()
+    
+    while True:
+        try:
+            print("--- Input Data Bunga ---")
+            sepal_length = float(input("Panjang Kelopak (sepal): "))
+            sepal_width = float(input("Lebar Kelopak (sepal): "))
+            petal_length = float(input("Panjang Mahkota (petal): "))
+            petal_width = float(input("Lebar Mahkota (petal): "))
+            
+            # Prediksi
+            prediction, confidence, neighbors = classifier.predict_single(
+                sepal_length, sepal_width, petal_length, petal_width
+            )
+            
+            print(f"\n--- Hasil Prediksi ---")
+            print(f"Jenis Bunga: {species_info[prediction]['nama']}")
+            print(f"Confidence: {confidence:.1f}%")
+            print(f"Karakteristik: {species_info[prediction]['ciri']}")
+            
+            print(f"\n--- Detail K-NN (k=5) ---")
+            print("Tetangga terdekat:")
+            for i, (dist, species) in enumerate(neighbors, 1):
+                print(f"  {i}. {species_info[species]['nama']} (jarak: {dist:.2f})")
+            
+            # Validasi input
+            print(f"\n--- Validasi Input ---")
+            if sepal_length < 4.0 or sepal_length > 8.0:
+                print("Peringatan: Panjang kelopak tidak biasa (normal: 4.0-8.0 cm)")
+            if sepal_width < 2.0 or sepal_width > 4.5:
+                print("Peringatan: Lebar kelopak tidak biasa (normal: 2.0-4.5 cm)")
+            if petal_length < 1.0 or petal_length > 7.0:
+                print("Peringatan: Panjang mahkota tidak biasa (normal: 1.0-7.0 cm)")
+            if petal_width < 0.1 or petal_width > 3.0:
+                print("Peringatan: Lebar mahkota tidak biasa (normal: 0.1-3.0 cm)")
+            
+        except ValueError:
+            print("Input tidak valid! Masukkan angka yang benar.")
+            continue
+        
+        print("\n" + "="*50)
+        lanjut = input("Prediksi bunga lain? (y/n): ").lower()
+        if lanjut != 'y':
+            break
+    
+    print("Terima kasih telah menggunakan program klasifikasi Iris!")
+
+# Contoh penggunaan untuk testing otomatis
+def demo_predictions():
+    """
+    Demo prediksi dengan contoh data
+    """
+    df = create_iris_dataset()
+    species_info = get_species_info()
+    
+    X = df[['sepal_length', 'sepal_width', 'petal_length', 'petal_width']].values
+    y = df['species'].values
+    
+    classifier = IrisKNNClassifier(k=3)
+    classifier.fit(X, y)
+    
+    print("=== DEMO PREDIKSI BUNGA IRIS ===\n")
+    
+    # Contoh prediksi
+    test_cases = [
+        (5.0, 3.5, 1.3, 0.3),  # Kemungkinan setosa
+        (6.0, 3.0, 4.5, 1.5),  # Kemungkinan versicolor  
+        (7.0, 3.2, 6.0, 2.0),  # Kemungkinan virginica
+    ]
+    
+    for i, (sl, sw, pl, pw) in enumerate(test_cases, 1):
+        prediction, confidence, _ = classifier.predict_single(sl, sw, pl, pw)
+        print(f"Test {i}: Sepal({sl}, {sw}), Petal({pl}, {pw})")
+        print(f"Prediksi: {species_info[prediction]['nama']} ({confidence:.1f}%)")
+        print()
+
+if __name__ == "__main__":
+    # Pilih mode
+    print("Pilih mode:")
+    print("1. Mode Interaktif (input manual)")
+    print("2. Mode Demo (contoh otomatis)")
+    
+    choice = input("Pilihan (1/2): ")
+    
+    if choice == "1":
+        main()
+    else:
+        demo_predictions()

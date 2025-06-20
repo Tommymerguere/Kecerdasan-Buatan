@@ -210,7 +210,7 @@ def demo_predictions():
 
 if __name__ == "__main__":
     # Pilih mode
-    print("Pilih mode:")
+    print("📋Pilih mode:")
     print("1. Mode Interaktif (input manual)")
     print("2. Mode Demo (contoh otomatis)")
     
